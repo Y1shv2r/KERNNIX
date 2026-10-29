@@ -1,0 +1,1 @@
+source "$BR2_EXTERNAL_KERNIX_PATH/package/kernix-calibrate/Config.in"

@@ -1,0 +1,40 @@
+From: Kernix <kernix@localhost>
+Subject: [PATCH] dt-bindings: sound: describe BCLK clock selection
+
+The Kernix Pi Zero board uses simple-audio-card and has no MCLK wire.
+Expose the existing BCLK PLL path through an opt-in device property.
+The controller uses unpadded stereo frames and continuous clocks.
+
+Upstream-Status: Pending
+
+Signed-off-by: Kernix <kernix@localhost>
+---
+--- a/Documentation/devicetree/bindings/sound/ti,tlv320dac3100.yaml
++++ b/Documentation/devicetree/bindings/sound/ti,tlv320dac3100.yaml
+@@ -56,6 +56,13 @@
+   IOVDD-supply: true
+ 
+   DVDD-supply: true
++
++  ti,pll-bclk:
++    type: boolean
++    description: |
++      Use incoming BCLK as the PLL reference instead of MCLK. The serial
++      audio controller must supply BCLK with no padding bits between samples
++      and must keep the clock running while the codec is active.
+ 
+   reset-gpios:
+     description: GPIO specification for the active low RESET input.
+--- a/Documentation/devicetree/bindings/sound/simple-card.yaml
++++ b/Documentation/devicetree/bindings/sound/simple-card.yaml
+@@ -190,6 +190,10 @@
+     $ref: "#/definitions/frame-inversion"
+   simple-audio-card,bitclock-inversion:
+     $ref: "#/definitions/bitclock-inversion"
++  simple-audio-card,continuous-clock:
++    description: Keep the serial clock running while the audio link is active.
++    $ref: /schemas/types.yaml#/definitions/flag
++
+   simple-audio-card,format:
+     $ref: "#/definitions/format"
+   simple-audio-card,mclk-fs:

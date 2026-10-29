@@ -1,0 +1,20 @@
+#!/bin/sh
+# Temporarily replace only the LCD driver; restore it on exit.
+set -eu
+/etc/init.d/S99calibrate stop
+modprobe spidev
+LCD_DRIVER=$(basename "$(readlink /sys/bus/spi/devices/spi0.0/driver)")
+restore() {
+ if [ -e /sys/bus/spi/drivers/spidev/spi0.0 ]; then
+  echo spi0.0 > /sys/bus/spi/drivers/spidev/unbind || true
+ fi
+ printf '\n' > /sys/bus/spi/devices/spi0.0/driver_override
+ echo spi0.0 > "/sys/bus/spi/drivers/$LCD_DRIVER/bind" || true
+}
+echo spi0.0 > "/sys/bus/spi/drivers/$LCD_DRIVER/unbind"
+trap restore EXIT
+trap 'exit 1' INT TERM
+echo spidev > /sys/bus/spi/devices/spi0.0/driver_override
+echo spi0.0 > /sys/bus/spi/drivers/spidev/bind
+sleep 1
+/usr/bin/kernix-lcd-registers

@@ -1,0 +1,55 @@
+#!/bin/sh
+# A start request is successful only when the daemon owns its D-Bus service.
+set -eu
+export LC_ALL=C
+name=${1:-}
+action=${2:-}
+case "$name" in
+    bluetoothd) daemon=/usr/libexec/bluetooth/bluetoothd; args=-n ;;
+    bluealsa)
+        daemon=/usr/bin/bluealsa
+        BLUEALSA_ARGS="-p a2dp-source --sbc-quality=low"
+        [ ! -r /etc/default/bluealsa ] || . /etc/default/bluealsa
+        args=$BLUEALSA_ARGS ;;
+    *) exit 2 ;;
+esac
+ready() {
+    if [ "$name" = bluealsa ]; then
+        bluealsa-cli status >/dev/null 2>&1
+    else
+        dbus-send --system --print-reply --reply-timeout=1000 --dest=org.bluez \
+            / org.freedesktop.DBus.ObjectManager.GetManagedObjects >/dev/null 2>&1
+    fi
+}
+start() {
+    if ready; then echo "$name is ready"; return 0; fi
+    # --exec avoids launching a duplicate when another terminal started it.
+    if ! pidof "$name" >/dev/null; then
+        start-stop-daemon --start --background --make-pidfile \
+            --pidfile "/run/$name.pid" --exec /bin/sh -- \
+            -c 'exec "$@" >>"$KERNIX_DAEMON_LOG" 2>&1' sh "$daemon" $args
+    fi
+    for attempt in 1 2 3 4 5; do
+        if ready; then echo "$name is ready"; return 0; fi
+        sleep 1
+    done
+    echo "$name did not become ready; see /tmp/$name.log" >&2
+    tail -20 "/tmp/$name.log" >&2 || true
+    return 1
+}
+stop() {
+    start-stop-daemon --stop --oknodo --exec "$daemon"
+    for attempt in 1 2 3 4 5; do
+        if ! pidof "$name" >/dev/null; then rm -f "/run/$name.pid"; return 0; fi
+        sleep 1
+    done
+    echo "$name did not stop" >&2
+    return 1
+}
+export KERNIX_DAEMON_LOG=/tmp/$name.log
+case "$action" in
+    start) start ;;
+    stop) stop ;;
+    restart) stop; start ;;
+    *) echo "Usage: $0 {bluetoothd|bluealsa} {start|stop|restart}" >&2; exit 2 ;;
+esac

@@ -1,0 +1,11 @@
+#!/bin/sh
+case "$1" in
+ start|restart)
+  /usr/bin/kernix-library-scan --validate /mnt/music/current/library.db >/tmp/kernix-library.log 2>&1 || {
+   cat /tmp/kernix-library.log >&2
+   exit 1
+  }
+  ;;
+ stop) ;;
+ *) echo "Usage: $0 {start|stop|restart}";exit 1 ;;
+esac

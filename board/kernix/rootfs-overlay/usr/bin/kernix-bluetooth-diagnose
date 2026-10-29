@@ -1,0 +1,21 @@
+#!/bin/sh
+# Read-only snapshots; do not restart a failing service before collecting these.
+export LC_ALL=C
+[ ! -r /etc/default/kernix-audio ] || . /etc/default/kernix-audio
+printf '\nServices:\n'
+ps | grep -E 'bluetoothd|bluealsa|dbus'
+printf '\nUSB devices:\n'
+lsusb
+printf '\nControllers:\n'
+ls /sys/class/bluetooth
+printf '\nBlueALSA:\n'
+bluealsa-cli status
+for pcm in $(bluealsa-cli list-pcms); do bluealsa-cli info "$pcm"; done
+printf '\nBlueZ managed objects:\n'
+dbus-send --system --print-reply --reply-timeout=3000 --dest=org.bluez / org.freedesktop.DBus.ObjectManager.GetManagedObjects
+printf '\nDaemon and output logs:\n'
+for log in /tmp/bluetoothd.log /tmp/bluealsa.log /tmp/kernix-audio.log; do
+    [ ! -r "$log" ] || { echo "$log"; tail -60 "$log"; }
+done
+printf '\nKernel events:\n'
+dmesg | tail -40

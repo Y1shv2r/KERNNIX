@@ -1,0 +1,17 @@
+# Base raw-to-screen mapping used when the user collected measurements.
+# Keep these settings together with the fitted correction below.
+KERNIX_TOUCH_SWAP=1
+KERNIX_TOUCH_INVERT_X=0
+KERNIX_TOUCH_INVERT_Y=1
+# Optional controller-coordinate bounds:
+# KERNIX_TOUCH_XMIN=0
+# KERNIX_TOUCH_XMAX=4095
+# KERNIX_TOUCH_YMIN=0
+# KERNIX_TOUCH_YMAX=4095
+
+# Correction fitted to 32 user-supplied screen-coordinate corners.
+# corrected = (base_screen * SCALE + OFFSET) / 100
+KERNIX_TOUCH_SCREEN_X_SCALE=-117
+KERNIX_TOUCH_SCREEN_X_OFFSET=34672
+KERNIX_TOUCH_SCREEN_Y_SCALE=131
+KERNIX_TOUCH_SCREEN_Y_OFFSET=-4714

@@ -1,0 +1,111 @@
+#!/bin/sh
+# Select the output for applications opening the ALSA default PCM.
+set -eu
+STATE_DIR=/var/lib/kernix-audio
+[ ! -r /etc/default/kernix-audio ] || . /etc/default/kernix-audio
+usage() {
+    echo "Usage: kernix-audio {aux|dac} | bluetooth [AA:BB:CC:DD:EE:FF] | status" >&2
+    exit 1
+}
+[ "$#" -gt 0 ] || usage
+case "$1" in
+    status)
+        [ "$#" -eq 1 ] || usage
+        sed -n '1s/^# Kernix output: /Output: /p' "$STATE_DIR/asound.conf"
+        exit 0 ;;
+    aux|dac)
+        [ "$#" -eq 1 ] || usage
+        [ -d /proc/asound ] || { echo 'ALSA is unavailable' >&2; exit 1; }
+        found=false
+        for card in /proc/asound/card*/id; do
+            [ -r "$card" ] || continue
+            if [ "$(cat "$card")" = KernixDAC ]; then found=true; break; fi
+        done
+        "$found" || { echo 'KernixDAC is unavailable; check wiring and dmesg' >&2; exit 1; }
+        /usr/libexec/kernix/alsa start
+        ;;
+    bluetooth)
+        [ "$#" -le 2 ] || usage
+        if [ "$#" -eq 1 ]; then
+            : "${BT_DEVICE:?Set BT_DEVICE in /etc/default/kernix-audio or supply an address}"
+            set -- bluetooth "$BT_DEVICE"
+        fi
+        printf '%s\n' "$2" | LC_ALL=C grep -Eq '^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$' || {
+            echo 'Expected Bluetooth speaker/headphone address AA:BB:CC:DD:EE:FF' >&2; exit 1;
+        }
+        /usr/libexec/kernix/bluetooth-connect "$2"
+        # Convert songs to the negotiated transport format in ALSA plug.
+        # Asking BlueALSA to change a live SBC transport can tear it down.
+        BT_ADDRESS=$(printf '%s' "$2" | tr 'a-f:' 'A-F_')
+        BT_PCM=$(bluealsa-cli list-pcms | grep -E "/dev_${BT_ADDRESS}/a2dpsrc/sink$" | head -1)
+        [ -n "$BT_PCM" ] || { echo 'Bluetooth endpoint disappeared' >&2; exit 1; }
+        BT_INFO=$(LC_ALL=C bluealsa-cli info "$BT_PCM")
+        BT_RATE=$(printf '%s\n' "$BT_INFO" | sed -n 's/^Sampling: \([0-9][0-9]*\) Hz$/\1/p')
+        BT_CHANNELS=$(printf '%s\n' "$BT_INFO" | sed -n 's/^Channels: \([0-9][0-9]*\)$/\1/p')
+        case "$BT_RATE" in ''|*[!0-9]*) echo 'Invalid Bluetooth sampling rate' >&2; exit 1 ;; esac
+        [ "$BT_RATE" -ge 8000 ] && [ "$BT_RATE" -le 192000 ] || {
+            echo 'Bluetooth sampling rate is not ready' >&2; exit 1;
+        }
+        case "$BT_CHANNELS" in 1|2) ;; *) echo 'Invalid Bluetooth channel count' >&2; exit 1 ;; esac
+        ;;
+    *) usage ;;
+esac
+mkdir -p "$STATE_DIR"
+TEMP_CONFIG=$(mktemp "$STATE_DIR/asound.conf.XXXXXX")
+trap 'rm -f "$TEMP_CONFIG"' EXIT HUP INT TERM
+if [ "$1" = dac ] || [ "$1" = aux ]; then
+    cat > "$TEMP_CONFIG" <<'CONFIG'
+# Kernix output: dac
+pcm.!default {
+    type plug
+    slave {
+        pcm "hw:CARD=KernixDAC,DEV=0"
+        format S16_LE
+        rate 48000
+        channels 2
+    }
+}
+ctl.!default {
+    type hw
+    card "KernixDAC"
+}
+CONFIG
+else
+    cat > "$TEMP_CONFIG" <<CONFIG
+# Kernix output: bluetooth $2
+pcm.!default {
+    type plug
+    slave {
+        pcm {
+            type bluealsa
+            device "$2"
+            profile "a2dp"
+            service "org.bluealsa"
+        }
+        rate $BT_RATE
+        channels $BT_CHANNELS
+    }
+}
+ctl.!default {
+    type bluealsa
+    device "$2"
+}
+CONFIG
+fi
+# A successful Bluetooth switch also silences the unused analog outputs.
+# A Bluetooth-only system may have no DAC at all.
+if [ "$1" = bluetooth ]; then
+    for card in /proc/asound/card*/id; do
+        [ -r "$card" ] || continue
+        if [ "$(cat "$card")" = KernixDAC ]; then
+            /usr/libexec/kernix/alsa stop || {
+                echo 'Could not mute DAC; output selection was not changed' >&2
+                exit 1
+            }
+            break
+        fi
+    done
+fi
+chmod 0644 "$TEMP_CONFIG"
+mv -f "$TEMP_CONFIG" "$STATE_DIR/asound.conf"
+echo "Selected $1. Restart playback to use this output."

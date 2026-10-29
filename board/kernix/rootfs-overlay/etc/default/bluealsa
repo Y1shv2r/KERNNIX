@@ -1,0 +1,2 @@
+# Hardware-tested setting: low SBC bitrate avoids periodic playback gaps.
+BLUEALSA_ARGS="-p a2dp-source --sbc-quality=low"

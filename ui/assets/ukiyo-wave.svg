@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144">
+ <rect width="144" height="144" fill="#e7d9b8"/>
+ <circle cx="104" cy="34" r="23" fill="#c84625"/>
+ <path d="M66 102 L99 75 L109 89 L118 85 L144 105Z" fill="#718080"/>
+ <path d="M99 75 L92 90 L99 86 L104 91Z" fill="#f6ecd2"/>
+ <path d="M-6 144 C4 119 -2 85 18 61 C36 37 61 43 76 72 C58 53 40 53 33 70 C24 90 46 102 77 107 C106 113 130 105 150 88 L150 150Z" fill="#12333e"/>
+ <path d="M-4 142 C20 123 9 89 27 66 C39 53 56 55 67 65 C50 55 38 63 38 76 C38 93 64 102 87 105 C111 108 134 101 148 91" fill="none" stroke="#3b666c" stroke-width="3"/>
+ <path d="M-4 134 C21 111 17 85 29 72 C20 102 43 116 72 120 C109 125 134 111 148 102" fill="none" stroke="#d7d4b9" stroke-width="2.6"/>
+ <path d="M-6 145 C28 119 30 95 30 83 C35 112 74 127 107 124 C128 122 141 114 151 109" fill="none" stroke="#e7dfc5" stroke-width="4"/>
+ <path d="M-5 150 C39 130 40 116 44 104 C50 124 97 139 150 119" fill="none" stroke="#527780" stroke-width="2"/>
+ <path d="M16 149 C43 136 54 125 55 117 C80 141 125 138 150 127" fill="none" stroke="#f5eacf" stroke-width="3"/>
+ <path d="M62 149 C90 144 124 143 149 134" fill="none" stroke="#aebeb1" stroke-width="2"/>
+ <!-- The crest is cut into pale, finger-like foam shapes. -->
+ <path d="M11 78 C18 58 30 47 43 46 C54 46 69 55 76 72 L67 64 L67 71 L59 60 L59 67 L53 57 L50 64 L46 56 L43 64 L38 59 L34 69 L29 66 L23 77 L20 73 L14 86Z" fill="#f5ead0"/>
+ <path d="M22 61 C31 45 45 40 59 48" fill="none" stroke="#f7edd6" stroke-width="3.5"/>
+ <path d="M14 78 C20 57 31 47 43 46 M28 73 C31 59 42 53 51 57" fill="none" stroke="#31505a" stroke-width="1"/>
+ <path d="M-4 96 C4 84 10 88 14 101 L9 96 L9 108 L3 102 L0 115 L-4 111Z" fill="#f4e8cc"/>
+ <path d="M-4 111 C9 110 13 121 22 124" fill="none" stroke="#ede3c7" stroke-width="2.5"/>
+ <path d="M13 144 C18 130 27 125 37 126 M64 140 C75 133 81 137 91 140" fill="none" stroke="#f8ecd0" stroke-width="1.2"/>
+ <g fill="#f7ecd2">
+  <circle cx="22" cy="43" r="1.4"/><circle cx="31" cy="37" r="1.2"/><circle cx="39" cy="41" r="1.6"/>
+  <circle cx="17" cy="52" r="1"/><circle cx="48" cy="37" r="1.1"/><circle cx="54" cy="43" r="1"/>
+  <circle cx="10" cy="65" r="1.3"/><circle cx="8" cy="55" r=".8"/><circle cx="36" cy="31" r=".8"/>
+ </g>
+ <g fill="#294b55" opacity=".7">
+  <circle cx="21" cy="40" r=".5"/><circle cx="33" cy="34" r=".5"/><circle cx="44" cy="40" r=".6"/>
+  <circle cx="16" cy="58" r=".5"/><circle cx="27" cy="47" r=".5"/><circle cx="38" cy="38" r=".4"/>
+ </g>
+</svg>

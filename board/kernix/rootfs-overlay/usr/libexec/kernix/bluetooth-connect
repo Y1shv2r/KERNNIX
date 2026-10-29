@@ -1,0 +1,53 @@
+#!/bin/sh
+# Connect an already-paired headset without parsing bluetoothctl terminal text.
+set -eu
+export LC_ALL=C
+address=${1:-}
+printf '%s\n' "$address" | grep -Eq '^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$' || {
+    echo 'Expected headset address AA:BB:CC:DD:EE:FF' >&2; exit 2;
+}
+address=$(printf '%s' "$address" | tr 'a-f' 'A-F')
+/usr/bin/kernix-audio-service bluetooth start
+# Select the first available USB/onboard controller rather than assuming hci0.
+adapter=
+for entry in /sys/class/bluetooth/hci*; do
+    [ -e "$entry" ] || continue
+    adapter=${entry##*/}
+    break
+done
+[ -n "$adapter" ] || { echo 'No Bluetooth controller; check USB dongle and firmware' >&2; exit 1; }
+device=/org/bluez/$adapter/dev_$(printf '%s' "$address" | tr ':' '_')
+pcm=/org/bluealsa/$adapter/dev_$(printf '%s' "$address" | tr ':' '_')/a2dpsrc/sink
+call() {
+    dbus-send --system --print-reply --reply-timeout="${reply_timeout:-3000}" --dest=org.bluez "$@"
+}
+call /org/bluez/$adapter org.freedesktop.DBus.Properties.Set \
+    string:org.bluez.Adapter1 string:Powered variant:boolean:true >/dev/null
+# Trust is explicit for the address selected by the user. Pairing stays interactive.
+call "$device" org.freedesktop.DBus.Properties.Set \
+    string:org.bluez.Device1 string:Trusted variant:boolean:true >/dev/null || {
+    echo 'Device is unavailable. Pair it first with bluetoothctl (scan on, pair ADDRESS, trust ADDRESS).' >&2
+    exit 1
+}
+ready() {
+    info=$(bluealsa-cli info "$pcm" 2>/dev/null) || return 1
+    printf '%s\n' "$info" | grep -q '^Transport: A2DP-source$' &&
+    printf '%s\n' "$info" | grep -q '^Mode: sink$'
+}
+# An existing valid audio endpoint takes priority over generic connection text.
+if ! ready; then
+    # Request the remote Audio Sink profile, not an arbitrary headset profile.
+    reply_timeout=15000 call "$device" org.bluez.Device1.ConnectProfile \
+        string:0000110b-0000-1000-8000-00805f9b34fb || true
+fi
+# Allow asynchronous transport negotiation, requiring a stable endpoint.
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if ready; then
+        sleep 1
+        if ready; then echo "Bluetooth audio ready: $address"; exit 0; fi
+    fi
+    sleep 1
+done
+echo 'No stable A2DP playback endpoint. Selection was not changed.' >&2
+echo 'Put headphones nearby, disconnect other sources, and run kernix-bluetooth-diagnose.' >&2
+exit 1

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Native TFT music player. Runtime logs stay in /tmp.
+if [ -r /etc/default/kernix-ui ]; then
+ set -a
+ . /etc/default/kernix-ui
+ set +a
+fi
+case "$1" in
+ start)
+  start-stop-daemon -S -b -m -p /var/run/kernix-calibrate.pid -x /bin/sh -- -c '
+   for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    if /usr/bin/kernix-calibrate --player >>/tmp/kernix-calibrate.log 2>&1; then exit 0; fi
+    sleep 1
+   done'
+  ;;
+ stop)
+  start-stop-daemon -K -p /var/run/kernix-calibrate.pid 2>/dev/null || true
+  killall kernix-calibrate 2>/dev/null || true
+  rm -f /var/run/kernix-calibrate.pid
+  ;;
+ restart) "$0" stop; "$0" start ;;
+ *) echo "Usage: $0 {start|stop|restart}"; exit 1 ;;
+esac

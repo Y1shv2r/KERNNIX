@@ -1,0 +1,24 @@
+# Local dependency checkout, downloads and generated firmware
+/buildroot/
+/output/
+/dist/
+/.local/
+
+# Personal music inbox and editable master library
+/music/
+/library/*
+!/library/README.md
+
+# Host caches and editor state
+__pycache__/
+*.py[cod]
+*.log
+*.core
+core
+.vscode/
+.idea/
+*~
+*.swp
+
+# Personal command reference
+/cmd.md

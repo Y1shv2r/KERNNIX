@@ -1,0 +1,3 @@
+# Remote speaker/headphones, not the USB adapter address.
+# Set this on the Pi, or put a build override in .local/kernix-audio.
+BT_DEVICE=

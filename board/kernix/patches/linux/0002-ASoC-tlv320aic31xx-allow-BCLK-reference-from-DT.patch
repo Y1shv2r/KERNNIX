@@ -1,0 +1,40 @@
+From: Kernix <kernix@localhost>
+Subject: [PATCH] ASoC: tlv320aic31xx: allow DT to select BCLK as PLL input
+
+The Kernix Pi Zero board uses simple-audio-card and has no MCLK wire.
+Expose the existing BCLK PLL path through an opt-in device property.
+The controller uses unpadded stereo frames and continuous clocks.
+
+Upstream-Status: Pending
+
+Signed-off-by: Kernix <kernix@localhost>
+---
+--- a/sound/soc/codecs/tlv320aic31xx.c
++++ b/sound/soc/codecs/tlv320aic31xx.c
+@@ -967,6 +967,7 @@
+ 	struct snd_soc_component *component = dai->component;
+ 	struct aic31xx_priv *aic31xx = snd_soc_component_get_drvdata(component);
+ 	u8 data = 0;
++	int ret;
+ 
+ 	dev_dbg(component->dev, "## %s: width %d rate %d\n",
+ 		__func__, params_width(params),
+@@ -1001,6 +1002,18 @@
+ 	 * If BCLK is used as PLL input, the sysclk is determined by the hw
+ 	 * params. So it must be updated here to match the input frequency.
+ 	 */
++	/* Boards without MCLK can explicitly select the incoming I2S BCLK.
++	 * Keep this opt-in so existing machine drivers retain clock control.
++	 */
++	if (device_property_read_bool(aic31xx->dev, "ti,pll-bclk")) {
++		ret = snd_soc_component_update_bits(component, AIC31XX_CLKMUX,
++				AIC31XX_PLL_CLKIN_MASK,
++				AIC31XX_PLL_CLKIN_BCLK << AIC31XX_PLL_CLKIN_SHIFT);
++		if (ret < 0)
++			return ret;
++		aic31xx->sysclk_id = AIC31XX_PLL_CLKIN_BCLK;
++	}
++
+ 	if (aic31xx->sysclk_id == AIC31XX_PLL_CLKIN_BCLK) {
+ 		aic31xx->sysclk = params_rate(params) * params_width(params) *
+ 				  params_channels(params);

@@ -1,0 +1,18 @@
+#!/bin/sh
+# Audio service startup is deliberately manual while testing.
+set -eu
+SERVICES=/usr/libexec/kernix
+case "${1:-}:${2:-}" in
+    dac:start|dac:stop|dac:restart|dac:save)
+        [ "$#" -eq 2 ] || exit 2
+        exec "$SERVICES/alsa" "$2" ;;
+    bluetooth:start)
+        [ "$#" -eq 2 ] || exit 2
+        "$SERVICES/bluetoothd" start
+        "$SERVICES/bluealsa" start ;;
+    bluetooth:stop)
+        [ "$#" -eq 2 ] || exit 2
+        "$SERVICES/bluealsa" stop
+        "$SERVICES/bluetoothd" stop ;;
+    *) echo "Usage: kernix-audio-service dac {start|stop|restart|save} | bluetooth {start|stop}" >&2; exit 2 ;;
+esac

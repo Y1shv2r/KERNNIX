@@ -1,0 +1,24 @@
+#!/bin/sh
+# The UI worker stops its player before calling the shared terminal switch.
+set -eu
+exec >>/tmp/kernix-audio.log 2>&1
+case "${1:-}" in
+    pair|pair-status)
+        [ ! -r /etc/default/kernix-audio ] || . /etc/default/kernix-audio
+        : "${BT_DEVICE:?Set BT_DEVICE in /etc/default/kernix-audio}"
+        action=status
+        if [ "$1" = pair ]; then
+            /usr/bin/kernix-audio-service bluetooth start
+            action=pair
+        fi
+        adapter=
+        for entry in /sys/class/bluetooth/hci*; do
+            [ -e "$entry" ] || continue
+            adapter=${entry##*/}
+            break
+        done
+        [ -n "$adapter" ] || exit 1
+        exec /usr/bin/kernix-bluetooth-pair "$action" "$adapter" "$BT_DEVICE" ;;
+    aux|dac|bluetooth) exec /usr/bin/kernix-audio "$1" ;;
+    *) echo "Usage: $0 {aux|dac|bluetooth|pair|pair-status}" >&2; exit 2 ;;
+esac

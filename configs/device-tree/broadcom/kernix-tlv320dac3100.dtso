@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: GPL-2.0
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "brcm,bcm2835";
+
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            /*
+             * These nodes describe the breakout's physical onboard
+             * regulators. VIN is powered from the Pi's 3.3 V rail.
+             */
+            kernix_dac_3v3: regulator-kernix-dac-3v3 {
+                compatible = "regulator-fixed";
+                regulator-name = "kernix-dac-3v3";
+                regulator-min-microvolt = <3300000>;
+                regulator-max-microvolt = <3300000>;
+                regulator-always-on;
+                regulator-boot-on;
+                vin-supply = <&vdd_3v3_reg>;
+            };
+
+            kernix_dac_1v8: regulator-kernix-dac-1v8 {
+                compatible = "regulator-fixed";
+                regulator-name = "kernix-dac-1v8";
+                regulator-min-microvolt = <1800000>;
+                regulator-max-microvolt = <1800000>;
+                regulator-always-on;
+                regulator-boot-on;
+                vin-supply = <&vdd_3v3_reg>;
+            };
+        };
+    };
+
+    fragment@1 {
+        target = <&i2c1>;
+        __overlay__ {
+            status = "okay";
+            #address-cells = <1>;
+            #size-cells = <0>;
+
+            kernix_codec: codec@18 {
+                compatible = "ti,tlv320dac3100";
+                reg = <0x18>;
+                #sound-dai-cells = <0>;
+                /* No MCLK wire: derive the DAC PLL reference from BCLK. */
+                ti,pll-bclk;
+
+                HPVDD-supply = <&kernix_dac_3v3>;
+                AVDD-supply = <&kernix_dac_3v3>;
+                IOVDD-supply = <&kernix_dac_3v3>;
+                DVDD-supply = <&kernix_dac_1v8>;
+
+                /* The speaker supply pins connect to breakout VIN. */
+                SPLVDD-supply = <&vdd_3v3_reg>;
+                SPRVDD-supply = <&vdd_3v3_reg>;
+
+                /* Physical pin 29 = BCM GPIO5; active-low reset. */
+                reset-gpios = <&gpio 5 1>;
+            };
+        };
+    };
+
+    fragment@2 {
+        target = <&i2s>;
+        __overlay__ {
+            status = "okay";
+        };
+    };
+
+    fragment@3 {
+        target = <&sound>;
+        __overlay__ {
+            compatible = "simple-audio-card";
+            status = "okay";
+
+            simple-audio-card,name = "KernixDAC";
+            simple-audio-card,format = "i2s";
+            /* Keep the PLL reference present while the codec is active. */
+            simple-audio-card,continuous-clock;
+
+            /* The Raspberry Pi generates BCLK and frame clock. */
+            simple-audio-card,bitclock-master = <&kernix_cpu_dai>;
+            simple-audio-card,frame-master = <&kernix_cpu_dai>;
+
+            kernix_cpu_dai: simple-audio-card,cpu {
+                sound-dai = <&i2s>;
+            };
+
+            simple-audio-card,codec {
+                sound-dai = <&kernix_codec>;
+            };
+        };
+    };
+};

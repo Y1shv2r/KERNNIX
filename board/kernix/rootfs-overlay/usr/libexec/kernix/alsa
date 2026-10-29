@@ -1,0 +1,71 @@
+#!/bin/sh
+# Initialize a balanced stereo headphone path on every AUX selection.
+CARD=KernixDAC
+STATE_FILE=/var/lib/alsa/asound.state
+
+wait_for_card() {
+    attempt=0
+    while [ "$attempt" -lt 5 ]; do
+        for card_id in /proc/asound/card*/id; do
+            [ -r "$card_id" ] || continue
+            [ "$(cat "$card_id")" != "$CARD" ] || return 0
+        done
+        attempt=$((attempt + 1))
+        sleep 1
+    done
+    echo "$CARD is unavailable; check dmesg" >&2
+    return 1
+}
+
+headphone_defaults() {
+    # Disable the unused speaker amp and mute headphones during setup.
+    amixer -q -c "$CARD" sset 'Speaker' off &&
+    amixer -q -c "$CARD" sset 'Speaker Driver' mute &&
+    amixer -q -c "$CARD" sset 'HP Driver' mute &&
+    amixer -q -c "$CARD" sset 'DAC' 87,87 &&
+    amixer -q -c "$CARD" sset 'DAC Left Input' 'Left Data' &&
+    amixer -q -c "$CARD" sset 'DAC Right Input' 'Right Data' &&
+    amixer -q -c "$CARD" sset 'Output Left From Left DAC' on &&
+    amixer -q -c "$CARD" sset 'Output Right From Right DAC' on &&
+    amixer -q -c "$CARD" sset 'HP Analog' 100,100 &&
+    amixer -q -c "$CARD" sset 'HP Left' on &&
+    amixer -q -c "$CARD" sset 'HP Right' on &&
+    amixer -q -c "$CARD" sset 'HP Driver' 0,0 unmute
+}
+
+start() {
+    wait_for_card || return 1
+    # A saved asymmetric/muted mixer must not silence one AUX channel.
+    # UI volume is software controlled; use balanced hardware defaults here.
+    printf 'Initializing stereo DAC: '
+    if headphone_defaults; then
+        echo 'OK (headphone defaults)'
+    else
+        amixer -q -c "$CARD" sset 'HP Driver' mute
+        echo FAIL
+        return 1
+    fi
+}
+
+stop() {
+    wait_for_card || return 1
+    amixer -q -c "$CARD" sset 'HP Driver' mute &&
+    amixer -q -c "$CARD" sset 'HP Left' off &&
+    amixer -q -c "$CARD" sset 'HP Right' off &&
+    amixer -q -c "$CARD" sset 'Speaker Driver' mute &&
+    amixer -q -c "$CARD" sset 'Speaker' off
+}
+
+save() {
+    wait_for_card || return 1
+    mkdir -p /var/lib/alsa
+    alsactl -f "$STATE_FILE" store "$CARD"
+}
+
+case "${1:-}" in
+    start) start ;;
+    stop) stop ;;
+    restart) stop && start ;;
+    save) save ;;
+    *) echo "Usage: $0 {start|stop|restart|save}"; exit 1 ;;
+esac

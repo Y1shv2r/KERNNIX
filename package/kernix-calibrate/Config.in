@@ -1,0 +1,6 @@
+config BR2_PACKAGE_KERNIX_CALIBRATE
+	bool "kernix-calibrate"
+	select BR2_PACKAGE_SQLITE
+	select BR2_PACKAGE_MPG123
+	help
+	  Framebuffer RGB and raw touchscreen calibration diagnostic.
